@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PESATRADE FINAL + Deposit</title>
+<script src="https://unpkg.com/lightweight-charts@4.2.1/dist/lightweight-charts.standalone.production.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:Inter,system-ui}
+body{background:#0a0e1a;color:#cbd5e1;max-width:520px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column}
+.header{display:flex;justify-content:space-between;padding:10px 12px;background:#0a0e1a;border-bottom:1px solid #1a233e}
+.logo{color:#00ff88;font-weight:900;font-size:20px}.pill{border:1px solid #00ff88;color:#00ff88;padding:3px 8px;border-radius:20px;font-size:9px;margin-left:6px}
+.top{display:flex;gap:12px;padding:8px 12px;font-size:11px;border-bottom:1px solid #1a233e}
+.bal{color:#00ff88}.price{color:white}
+.chart-wrap{display:flex} #chart{flex:1;height:320px} .ob{width:78px;background:#0a0e1a;border-left:1px solid #1a233e;padding:4px 6px;font-size:10px}
+.ob-row{display:flex;justify-content:space-between;padding:2px 0}
+.timer-line{height:3px;background:#1a233e} .fill{height:100%;background:#00ff88;width:0%}
+.status{padding:6px;text-align:center;font-size:11px;font-weight:800;color:#00ff88;background:#11182d}
+.controls{display:flex;gap:10px;padding:10px} .controls button{flex:1;padding:14px;border-radius:10px;border:none;font-weight:900;font-size:14px}
+.buy{background:#00c853;color:black} .sell{background:#ef4444;color:white}
+.inputs{display:flex;gap:6px;padding:6px 12px}
+.inputs input{flex:1;padding:11px;border-radius:10px;background:#151c32;border:1px solid #1e2d4a;color:white;font-weight:700;font-size:12px}
+.pills{display:flex;gap:6px;padding:6px 12px;overflow:auto} .pills button{padding:7px 11px;border-radius:20px;background:#151c32;border:1px solid #1e2d4a;color:white;font-size:11px;white-space:nowrap}
+.livebox{margin:8px 12px;background:#151c32;border-radius:12px;padding:10px;border:1px solid #1e2d4a}
+.row{display:flex;justify-content:space-between;padding:4px 0;font-size:11px}
+.msg{margin:8px 12px;padding:10px;border-radius:10px;text-align:center;font-size:11px;font-weight:800}
+.red{background:rgba(239,68,68,0.15);border:1px solid #7f1d1d;color:#f87171} .green{background:rgba(0,255,136,0.15);border:1px solid #00c853;color:#00ff88} .orange{background:rgba(255,165,0,0.15);border:1px solid orange;color:orange}
+.popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#151c32;border:2px solid #00ff88;border-radius:16px;padding:18px;z-index:200;display:none;text-align:center;min-width:300px}
+#loginScreen{position:fixed;inset:0;background:#0a0e1a;z-index:500;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:20px}
+.login-card{background:#151c32;border:1px solid #1e2d4a;border-radius:16px;padding:18px;width:100%;max-width:360px}
+.login-card input{width:100%;padding:12px;border-radius:10px;background:#0a0e1a;border:1px solid #1e2d4a;color:white;margin-bottom:8px}
+.btn{width:100%;padding:12px;border-radius:10px;border:none;font-weight:800;margin-top:5px} .btn-p{background:#00ff88;color:black} .btn-s{background:#1e2d4a;color:white}
+.hist{margin:10px 12px;font-size:10px} .hist-row{display:flex;justify-content:space-between;padding:4px 0;border-bottom:1px solid #111827}
+</style>
+</head>
+<body>
+<div id="loginScreen"><div class="login-card">
+<h2 style="color:#00ff88;text-align:center">ZPESA TRADE</h2>
+<p style="text-align:center;color:#64748b;font-size:11px;margin:6px 0 12px">Login + Slow + SL/TP + Deposit</p>
+<input id="user" placeholder="Username"/><input id="pass" type="password" placeholder="Password"/>
+<button class="btn btn-p" onclick="login()">LOGIN</button>
+<button class="btn btn-s" onclick="signup()">SIGN UP</button>
+<div id="loginMsg" style="text-align:center;font-size:11px;margin-top:8px;color:#f87171"></div>
+</div></div>
+
+<div class="header"><div style="display:flex;align-items:center"><div class="logo">ZPESA</div><span class="pill" id="userPill">-</span><span class="pill">Slow</span></div><button onclick="logout()" style="font-size:10px;background:#1e2d4a;border:1px solid #334155;color:white;padding:4px 8px;border-radius:6px">LOGOUT</button></div>
+<div class="top"><div>BALANCE<br><b class="bal" id="bal">KSh 0</b></div><div style="margin-left:auto;text-align:right">PRICE<br><b class="price" id="price">9735.13</b></div></div>
+<div class="chart-wrap"><div id="chart"></div><div class="ob" id="orderbook"></div></div>
+<div class="timer-line"><div class="fill" id="fill"></div></div>
+<div class="status" id="status">IDLE</div>
+<div class="controls"><button class="buy" id="buyBtn" onclick="placeTrade('BUY')">BUY</button><button class="sell" id="sellBtn" onclick="placeTrade('SELL')">SELL</button></div>
+<div class="inputs"><input id="amount" value="100" type="number" placeholder="Amt"/><input id="sl" value="50" type="number" placeholder="SL"/><input id="tp" value="300" type="number" placeholder="TP"/></div>
+<div class="pills"><button onclick="setVal('amount',100)">100</button><button onclick="setVal('amount',500)">500</button><button onclick="setVal('sl',50)">SL 50</button><button onclick="setVal('tp',300)">TP 300</button><button onclick="toggleSpeed()" style="border-color:#00ff88">SPEED</button></div>
+<div style="display:flex;gap:8px;padding:6px 12px">
+<button onclick="openDepo()" style="flex:1;padding:11px;border-radius:8px;background:#00ff88;color:black;font-weight:800;border:none">DEPOSIT</button>
+<button onclick="openWith()" style="flex:1;padding:11px;border-radius:8px;background:#151c32;border:1px solid #ef4444;color:#ef4444;font-weight:800">WITHDRAW</button>
+</div>
+<div class="livebox">
+<div class="row"><span>CURRENT</span><span style="color:#00ff88" id="cType">--</span></div>
+<div class="row"><span>Entry / Now</span><span id="cEntry">--</span></div>
+<div class="row"><span>Invest / SL-TP</span><span id="cSL">--</span></div>
+<div class="row" style="border-top:1px solid #1e2d4a;margin-top:4px;padding-top:6px"><span>Live P/L</span><span style="font-weight:900" id="cPayout">KSh 0.00</span></div>
+</div>
+<div class="msg orange" id="msg">Welcome - Place trade</div>
+<div class="hist"><div style="display:flex;justify-content:space-between;margin-bottom:4px"><b>HISTORY</b><button onclick="clearHist()" style="font-size:9px;background:#1e2d4a;color:white;border:none;padding:2px 6px;border-radius:4px">CLEAR</button></div><div id="histList">No trades yet</div></div>
+
+<div class="popup" id="popup"><div style="color:#64748b;font-size:11px" id="popHead">CLOSED</div><div style="font-size:24px;font-weight:900;margin:8px 0" id="popProfit">+KSh 0</div><div style="font-size:11px;color:white" id="popDetail"></div><button onclick="closePop()" style="margin-top:12px;width:100%;padding:10px;background:#00ff88;border:none;border-radius:8px;font-weight:800">OK</button></div>
+
+<div class="popup" id="depoPop" style="display:none;border-color:#00ff88">
+<h3 id="depoTitle" style="color:#00ff88;margin-bottom:10px">DEPOSIT</h3>
+<input id="depoAmt" type="number" placeholder="Amount KSh e.g 1000" style="width:100%;padding:12px;border-radius:8px;background:#0a0e1a;border:1px solid #1e2d4a;color:white;margin-bottom:10px"/>
+<button class="btn btn-p" onclick="doDepo()">CONFIRM</button>
+<button class="btn btn-s" onclick="closeDepo()">CANCEL</button>
+<div style="font-size:9px;color:#64748b;margin-top:8px">Fake M-Pesa simulation - adds to balance instantly</div>
+</div>
+
+<script>
+const CONFIG = {
+  candleSpeed: 2000,
+    newCandleEvery: 8,
+      startBalance: 10000,
+        shockSmall: 0.35,
+          shockBig: 1.2,
+            minTrade: 100
+            };
+            let currentUser=null, users=JSON.parse(localStorage.getItem('zpesa_users')||'{}');
+            let balance=CONFIG.startBalance, price=9735.13, entry=0, type='', trading=false, left=10, timer=null, data=[], chart, series, history=JSON.parse(localStorage.getItem('zpesa_hist')||'[]');
+
+            function signup(){ let u=user.value.trim(), p=pass.value.trim(); if(!u||!p){loginMsg.textContent='Enter user+pass';return;} if(users[u]){loginMsg.textContent='Exists, LOGIN';return;} users[u]={pass:p,balance:CONFIG.startBalance}; localStorage.setItem('zpesa_users',JSON.stringify(users)); loginMsg.style.color='#00ff88'; loginMsg.textContent='Created! Now LOGIN'; }
+            function login(){ let u=user.value.trim(), p=pass.value.trim(); if(!users[u]||users[u].pass!==p){loginMsg.textContent='Wrong, SIGN UP first';return;} currentUser=u; balance=users[u].balance; loginScreen.style.display='none'; userPill.textContent=u; bal.textContent='KSh '+balance.toFixed(3); localStorage.setItem('zpesa_session',u); renderHist(); }
+            function logout(){ if(currentUser){ users[currentUser].balance=balance; localStorage.setItem('zpesa_users',JSON.stringify(users)); } localStorage.removeItem('zpesa_session'); location.reload(); }
+            let sess=localStorage.getItem('zpesa_session'); if(sess && users[sess]) user.value=sess;
+
+            chart=LightweightCharts.createChart(document.getElementById('chart'),{layout:{background:{color:'#0a0e1a'},textColor:'#475569'},grid:{vertLines:{color:'#111827'},horzLines:{color:'#111827'}},rightPriceScale:{borderColor:'#1a233e'},timeScale:{borderColor:'#1a233e',timeVisible:true}});
+            series=chart.addCandlestickSeries({upColor:'#00ff88',downColor:'#ef4444',wickUpColor:'#00ff88',wickDownColor:'#ef4444',borderVisible:false});
+            let now=Math.floor(Date.now()/1000)-300; for(let i=0;i<40;i++){let o=9733+Math.random()*4; data.push({time:now+i*CONFIG.newCandleEvery,open:o,high:o+0.8,low:o-0.8,close:o+(Math.random()-0.5)*0.8});} series.setData(data); chart.timeScale().fitContent();
+
+            function volatilitySlow(){
+             let last=data[data.length-1].close;
+              let shock=(Math.random()-0.5)*CONFIG.shockSmall; if(Math.random()<0.05) shock=(Math.random()-0.5)*CONFIG.shockBig;
+               price=last+shock; if(price<9725) price=9725+Math.random(); if(price>9745) price=9745-Math.random();
+                document.getElementById('price').textContent=price.toFixed(4);
+                 let ts=Math.floor(Date.now()/1000);
+                  if(ts - data[data.length-1].time >= CONFIG.newCandleEvery){ let o=data[data.length-1].close; data.push({time:ts,open:o,high:Math.max(o,price),low:Math.min(o,price),close:price}); if(data.length>100) data.shift(); }
+                   else { let c=data[data.length-1]; c.high=Math.max(c.high,price); c.low=Math.min(c.low,price); c.close=price; }
+                    series.setData(data);
+                     let ob=''; for(let i=4;i>=0;i--){ob+=`<div class="ob-row" style="color:#00ff88"><span>${(price+i*0.2+0.6).toFixed(4)}</span></div>`;} ob+=`<div class="ob-row" style="color:white;background:#1e293b">${price.toFixed(4)}</div>`; for(let i=0;i<5;i++){ob+=`<div class="ob-row" style="color:#ef4444"><span>${(price-i*0.2-0.4).toFixed(4)}</span></div>`;} orderbook.innerHTML=ob;
+                      if(trading){
+                         let diff=price-entry; let invest=parseFloat(document.getElementById('amount').value)||0; let livePL=(type==='BUY'?diff:-diff)*invest*0.8;
+                            cEntry.textContent=entry.toFixed(4)+' / '+price.toFixed(4); cPayout.textContent=(livePL>=0?'+':'')+'KSh '+livePL.toFixed(2); cPayout.style.color=livePL>=0?'#00ff88':'#ef4444';
+                               let slVal=parseFloat(document.getElementById('sl').value)||0; let tpVal=parseFloat(document.getElementById('tp').value)||0;
+                                  if(slVal>0 && livePL <= -slVal) finish(true, livePL, 'STOP LOSS');
+                                     if(tpVal>0 && livePL >= tpVal) finish(true, livePL, 'TAKE PROFIT');
+                                      }
+                                      }
+                                      setInterval(volatilitySlow, CONFIG.candleSpeed);
+                                      function setVal(id,v){document.getElementById(id).value=v;}
+                                      function toggleSpeed(){ CONFIG.candleSpeed = CONFIG.candleSpeed===2000 ? 800 : 2000; alert('Speed now '+(CONFIG.candleSpeed===2000?'SLOW':'FAST')+' - will change after refresh'); }
+                                      function placeTrade(t){
+                                       if(!currentUser){alert('LOGIN first');return;} if(trading) return;
+                                        let amt=parseFloat(document.getElementById('amount').value)||0; if(amt<CONFIG.minTrade||amt>balance){msg.className='msg red'; msg.textContent='Invalid amount';return;}
+                                         type=t; entry=price; trading=true; left=10;
+                                          cType.textContent=t; cSL.textContent='KSh '+amt+' SL:'+(document.getElementById('sl').value||'--')+' TP:'+(document.getElementById('tp').value||'--');
+                                           status.textContent='ORDER '+t+' @ '+entry.toFixed(4); msg.className='msg orange'; msg.textContent=t+' running...';
+                                            buyBtn.disabled=sellBtn.disabled=true;
+                                             timer=setInterval(()=>{left--; fill.style.width=((10-left)/10*100)+'%'; if(left<=0) finish(false,0,'TIME');},1000);
+                                             }
+                                             function finish(isAuto=false, livePL=0, reason='TIME'){
+                                              clearInterval(timer); let amt=parseFloat(document.getElementById('amount').value)||0; let finalPL, win;
+                                               if(isAuto){ finalPL=livePL; balance+=finalPL; msg.className=finalPL<0?'msg red':'msg green'; msg.textContent=reason+' HIT KSh '+finalPL.toFixed(2); popHead.textContent=reason+' HIT'; popProfit.textContent=(finalPL>=0?'+':'')+'KSh '+finalPL.toFixed(2); popProfit.style.color=finalPL<0?'#ef4444':'#00ff88'; popDetail.innerHTML=reason+'<br>'+entry.toFixed(4)+' → '+price.toFixed(4); }
+                                                else { let diff=price-entry; win=(type==='BUY'&&diff>0)||(type==='SELL'&&diff<0); let mult=1.5+Math.random()*2; finalPL=win?amt*mult:-amt; balance+=finalPL; msg.className=win?'msg green':'msg red'; msg.textContent=(win?'PROFIT +':'LOSS ')+finalPL.toFixed(2); popHead.textContent=win?'PROFIT':'LOSS'; popHead.style.color=win?'#00ff88':'#ef4444'; popProfit.textContent=(win?'+':'')+'KSh '+finalPL.toFixed(2); popProfit.style.color=win?'#00ff88':'#ef4444'; popDetail.innerHTML='Volatility 10 Slow<br>'+entry.toFixed(4)+' → '+price.toFixed(4); }
+                                                 bal.textContent='KSh '+balance.toFixed(3); if(currentUser){ users[currentUser].balance=balance; localStorage.setItem('zpesa_users',JSON.stringify(users)); }
+                                                  history.unshift({time:new Date().toLocaleTimeString(), type, amt, pl:finalPL, reason}); if(history.length>20) history.pop(); localStorage.setItem('zpesa_hist',JSON.stringify(history)); renderHist();
+                                                   popup.style.display='block'; fill.style.width='0%'; buyBtn.disabled=sellBtn.disabled=false; trading=false;
+                                                   }
+                                                   function renderHist(){ if(history.length===0){histList.innerHTML='No trades yet';return;} histList.innerHTML=history.map(h=>`<div class="hist-row"><span>${h.time} ${h.type} ${h.amt}</span><span style="color:${h.pl>=0?'#00ff88':'#ef4444'}">${h.pl>=0?'+':''}${h.pl.toFixed(2)} ${h.reason}</span></div>`).join(''); }
+                                                   function clearHist(){ history=[]; localStorage.removeItem('zpesa_hist'); renderHist(); }
+                                                   function closePop(){popup.style.display='none';}
+                                                   // DEPOSIT/WITHDRAW
+                                                   let depoType='DEPOSIT';
+                                                   function openDepo(){depoType='DEPOSIT'; depoTitle.textContent='DEPOSIT - M-Pesa'; depoTitle.style.color='#00ff88'; depoPop.style.display='block';}
+                                                   function openWith(){depoType='WITHDRAW'; depoTitle.textContent='WITHDRAW'; depoTitle.style.color='#ef4444'; depoPop.style.display='block';}
+                                                   function closeDepo(){depoPop.style.display='none';}
+                                                   function doDepo(){
+                                                    let amt=parseFloat(depoAmt.value)||0; if(amt<100){alert('Min 100');return;}
+                                                     if(depoType==='DEPOSIT'){balance+=amt; msg.textContent='Deposited KSh '+amt; msg.className='msg green';}
+                                                      else { if(amt>balance){alert('Insufficient balance');return;} balance-=amt; msg.textContent='Withdrawn KSh '+amt+' - Sent to M-Pesa'; msg.className='msg red';}
+                                                       bal.textContent='KSh '+balance.toFixed(3);
+                                                        if(currentUser){users[currentUser].balance=balance; localStorage.setItem('zpesa_users',JSON.stringify(users));}
+                                                         history.unshift({time:new Date().toLocaleTimeString(), type:depoType, amt, pl:depoType==='DEPOSIT'?amt:-amt, reason:'BALANCE'}); localStorage.setItem('zpesa_hist',JSON.stringify(history)); renderHist();
+                                                          closeDepo(); depoAmt.value='';
+                                                          }
+                                                          </script>
+                                                          </body>
+                                                          </html>

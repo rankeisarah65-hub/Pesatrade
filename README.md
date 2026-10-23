@@ -1,2 +1,2 @@
 # Pesatrade
-Mobile-friendly demo platforms 
+Mobile-friendly demo platforms
